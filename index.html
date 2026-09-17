@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>社区充电桩预约台</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:#f1f5f4;color:#1f2937;min-height:100vh}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+  h1{font-size:24px}
+  .sub{color:#6b7280;font-size:13px;margin-top:4px}
+  .clock{font-variant-numeric:tabular-nums;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:10px 14px;font-size:14px;color:#374151;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px 18px;box-shadow:0 1px 3px rgba(16,24,40,.05);margin-bottom:16px}
+  .userbar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+  .users{display:flex;gap:8px;flex-wrap:wrap}
+  .user{border:1px solid #d1d5db;background:#fff;border-radius:999px;padding:8px 14px;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .15s}
+  .user:hover{border-color:#10b981}
+  .user.active{background:#059669;border-color:#059669;color:#fff}
+  .user.active .bat{background:rgba(255,255,255,.22);color:#fff}
+  .user.active .bat.low{background:#dc2626;color:#fff}
+  .bat{display:inline-block;background:#f3f4f6;border-radius:6px;padding:1px 7px;font-size:12px;color:#374151}
+  .bat.low{background:#fee2e2;color:#b91c1c;font-weight:600}
+  .battery-box{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px}
+  .battery-box input{width:76px;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px}
+  .tip{font-size:12px;color:#9ca3af}
+  .grid-wrap{overflow-x:auto}
+  .grid{display:grid;grid-template-columns:122px repeat(4,minmax(150px,1fr));gap:8px;min-width:800px}
+  .cell{background:#f9fafb;border:1px solid #eef0f2;border-radius:10px;padding:10px 8px;min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;font-size:13px}
+  .cell.head{background:transparent;border:none;min-height:0;font-weight:600;font-size:14px;padding:4px}
+  .cell.time{background:#eef2f7;border:none;font-weight:600;font-variant-numeric:tabular-nums;font-size:13px;gap:2px}
+  .cell.free{background:#f0fdf4;border:1px dashed #86efac}
+  .cell.mine{background:#ecfdf5;border:1px solid #34d399}
+  .cell.taken{background:#f3f4f6}
+  .cell.wait{background:#fffbeb;border:1px solid #fcd34d}
+  .tag{font-weight:600}
+  .tag.ok{color:#059669}
+  .tag.occ{color:#374151}
+  .tag.waiting{color:#b45309}
+  .qinfo{font-size:12px;color:#6b7280}
+  .reason{font-size:12px;color:#b91c1c;line-height:1.4}
+  .badge{display:inline-block;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:600}
+  .badge.now{background:#dcfce7;color:#15803d}
+  .badge.q{background:#fef3c7;color:#b45309}
+  .badge.chain{background:#e0e7ff;color:#4338ca}
+  .btn{border:none;border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;transition:filter .15s;font-family:inherit}
+  .btn:hover{filter:brightness(.93)}
+  .btn.primary{background:#059669;color:#fff}
+  .btn.amber{background:#f59e0b;color:#fff}
+  .btn.ghost{background:transparent;border:1px solid #d1d5db;color:#374151}
+  .btn.ghost.danger{border-color:#fca5a5;color:#dc2626}
+  .btn.small{padding:6px 12px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:900px){.cols{grid-template-columns:1fr}}
+  h2{font-size:16px;margin-bottom:10px}
+  .item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f3f4f6;font-size:14px}
+  .item:last-child{border-bottom:none}
+  .empty{color:#9ca3af;font-size:13px;padding:8px 0}
+  .logitem{font-size:13px;padding:6px 0;border-bottom:1px dashed #f3f4f6;color:#374151;line-height:1.5}
+  .logitem:last-child{border-bottom:none}
+  .lt{color:#9ca3af;font-variant-numeric:tabular-nums;margin-right:8px}
+  .rules{font-size:12.5px;color:#6b7280;line-height:1.9}
+  .rules b{color:#374151}
+  .reset{margin-top:10px}
+  #toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:#111827;color:#fff;padding:11px 20px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:all .25s;max-width:90vw;z-index:50;text-align:center}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast.error{background:#b91c1c}
+  #toast.ok{background:#047857}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <div>
+      <h1>🔌 社区充电桩预约台</h1>
+      <p class="sub">4 个车位 · 半小时时段 · 可预约未来 2 小时</p>
+    </div>
+    <div class="clock" id="clock"></div>
+  </header>
+
+  <section class="card userbar">
+    <div class="users" id="userTabs"></div>
+    <div class="battery-box">
+      <label for="batteryInput">当前电量</label>
+      <input id="batteryInput" type="number" min="0" max="100" step="1">
+      <span>%</span>
+      <button id="saveBattery" class="btn primary small">录入</button>
+      <span class="tip">电量低于 15% 可插队，但连占上限仍为 2 个时段</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="grid-wrap"><div class="grid" id="grid"></div></div>
+  </section>
+
+  <div class="cols">
+    <section class="card">
+      <h2>我的预约与排队</h2>
+      <div id="mine"></div>
+    </section>
+    <section class="card">
+      <h2>动态</h2>
+      <div id="log"></div>
+    </section>
+  </div>
+
+  <section class="card rules">
+    <b>规则说明</b><br>
+    ① 时段以半小时为单位，仅可预约未来 2 小时内的时段；同一车位同一时段不可重叠。<br>
+    ② 每人同一车位最多连占 2 个连续时段；电量低于 15% 的住户预约已满时段时可排至队首（插队），但插队同样不得突破连占上限。<br>
+    ③ 预约被取消或时段结束自动释放后，最早排队者自动顺延；若顺延会造成连占超限或时段重叠，则保持排队并提示原因，条件满足后自动补位。<br>
+    ④ 所有数据仅保存在当前浏览器（localStorage），重新打开页面自动恢复。
+    <div class="reset"><button id="resetBtn" class="btn ghost danger small">清空本机数据</button></div>
+  </section>
+</div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ================= 基础数据 ================= */
+const HALF = 30 * 60 * 1000;
+const KEY = 'community-charging-v1';
+const SPOTS = [
+  {id:'s1', name:'1号车位'},
+  {id:'s2', name:'2号车位'},
+  {id:'s3', name:'3号车位'},
+  {id:'s4', name:'4号车位'}
+];
+const DEFAULT_STATE = {
+  currentUserId: 'r1',
+  residents: [
+    {id:'r1', name:'张阿姨', battery:58},
+    {id:'r2', name:'李师傅', battery:12},
+    {id:'r3', name:'王先生', battery:33}
+  ],
+  bookings: [], // {id,spotId,slotStart,residentId,battery,status:'active'|'cancelled'|'done',createdAt}
+  queue: [],    // {id,spotId,slotStart,residentId,battery,jumped,blockedReason,createdAt}
+  log: []       // {t,text}
+};
+
+let state = load();
+
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(!raw) return structuredClone(DEFAULT_STATE);
+    const s = JSON.parse(raw);
+    if(!s || !Array.isArray(s.residents) || !Array.isArray(s.bookings) || !Array.isArray(s.queue)) throw 0;
+    s.log = Array.isArray(s.log) ? s.log : [];
+    if(!s.residents.some(r=>r.id===s.currentUserId)) s.currentUserId = s.residents[0].id;
+    return s;
+  }catch(e){ return structuredClone(DEFAULT_STATE); }
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+
+/* ================= 工具 ================= */
+const $ = id => document.getElementById(id);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+const fmt = ts => { const d=new Date(ts); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+const fmtS = ts => { const d=new Date(ts); return fmt(ts)+':'+String(d.getSeconds()).padStart(2,'0'); };
+const resident = id => state.residents.find(r=>r.id===id) || {name:'?'};
+const currentUser = () => resident(state.currentUserId);
+const spotName = id => (SPOTS.find(s=>s.id===id)||{}).name || id;
+const sameKey = (a,b) => a.spotId===b.spotId && a.slotStart===b.slotStart;
+
+/* 未来 2 小时内的半小时时段（对齐 :00 / :30） */
+function getSlots(){
+  const now = Date.now();
+  let start = Math.ceil(now / HALF) * HALF;
+  const slots = [];
+  while(start < now + 2*60*60*1000){ slots.push({start, end:start+HALF}); start += HALF; }
+  return slots;
+}
+
+/* 若该住户在指定车位再占 slotStart，连占长度（含自身） */
+function chainLenIfAdd(residentId, spotId, slotStart){
+  const has = t => state.bookings.some(b=>b.status==='active' && b.residentId===residentId && b.spotId===spotId && b.slotStart===t);
+  let n = 1, t = slotStart - HALF;
+  while(has(t)){ n++; t -= HALF; }
+  t = slotStart + HALF;
+  while(has(t)){ n++; t += HALF; }
+  return n;
+}
+/* 该住户在 slotStart 是否已有其他有效预约（跨车位重叠） */
+function personOverlap(residentId, slotStart){
+  return state.bookings.some(b=>b.status==='active' && b.residentId===residentId && b.slotStart===slotStart);
+}
+const activeAt = (spotId, slotStart) =>
+  state.bookings.find(b=>b.status==='active' && b.spotId===spotId && b.slotStart===slotStart);
+const queueOf = (spotId, slotStart) =>
+  state.queue.filter(q=>q.spotId===spotId && q.slotStart===slotStart);
+
+function addLog(text){
+  state.log.unshift({t: fmt(Date.now()), text});
+  if(state.log.length > 40) state.log.length = 40;
+}
+
+let toastTimer;
+function toast(msg, type){
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'show ' + (type||'');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ t.className=''; }, 3600);
+}
+
+/* ================= 核心动作 ================= */
+function book(spotId, slotStart){
+  const me = currentUser();
+  if(slotStart + HALF <= Date.now()){ toast('该时段已结束','error'); return; }
+  if(activeAt(spotId, slotStart)){ toast('该时段已被预约，可选择排队','error'); return; }
+  if(queueOf(spotId, slotStart).length){ toast('该时段已有人排队，请加入队列','error'); return; }
+  if(personOverlap(me.id, slotStart)){ toast('预约失败：您在此时段已有其他车位的预约（时段重叠）','error'); return; }
+  if(chainLenIfAdd(me.id, spotId, slotStart) > 2){ toast('预约失败：同一车位最多连占 2 个连续时段','error'); return; }
+  state.bookings.push({id:uid(), spotId, slotStart, residentId:me.id, battery:me.battery, status:'active', createdAt:Date.now()});
+  addLog(`📅 ${me.name} 预约了 ${spotName(spotId)} ${fmt(slotStart)}–${fmt(slotStart+HALF)}`);
+  save(); renderAll();
+  toast('预约成功','ok');
+}
+
+function joinQueue(spotId, slotStart){
+  const me = currentUser();
+  if(slotStart + HALF <= Date.now()){ toast('该时段已结束','error'); return; }
+  const mine = activeAt(spotId, slotStart);
+  if(mine && mine.residentId===me.id){ toast('您已预约了该时段','error'); return; }
+  if(!mine && !queueOf(spotId, slotStart).length){ toast('该时段空闲，可直接预约','error'); return; }
+  if(queueOf(spotId, slotStart).some(q=>q.residentId===me.id)){ toast('您已在该时段的队列中','error'); return; }
+
+  let jump = me.battery < 15, note = '';
+  if(jump){
+    const reasons = [];
+    if(personOverlap(me.id, slotStart)) reasons.push('此时段您已有其他预约（时段重叠）');
+    if(chainLenIfAdd(me.id, spotId, slotStart) > 2) reasons.push('接受后将连占超过 2 个时段');
+    if(reasons.length){ jump = false; note = `插队未生效：${reasons.join('；')}，已按普通排队处理`; }
+  }
+  const entry = {id:uid(), spotId, slotStart, residentId:me.id, battery:me.battery, jumped:jump, blockedReason:null, createdAt:Date.now()};
+  if(jump){
+    // 插到同 key 非插队者之前（插队者之间保持先来后到）
+    const idx = state.queue.findIndex(q=>sameKey(q,entry) && !q.jumped);
+    if(idx === -1) state.queue.push(entry); else state.queue.splice(idx, 0, entry);
+  }else{
+    state.queue.push(entry);
+  }
+  addLog(`${me.name} ${jump?'⚡插队':'排队'} ${spotName(spotId)} ${fmt(slotStart)}–${fmt(slotStart+HALF)} 时段`);
+  if(note) addLog(`⛔ ${me.name} ${note}`);
+  save(); renderAll();
+  toast(note || (jump ? '⚡ 电量低于 15%，已插队至队首' : '已加入排队'), note ? 'error' : 'ok');
+}
+
+function cancelBooking(id){
+  const b = state.bookings.find(x=>x.id===id);
+  if(!b || b.status!=='active') return;
+  b.status = 'cancelled';
+  addLog(`❌ ${resident(b.residentId).name} 取消了 ${spotName(b.spotId)} ${fmt(b.slotStart)}–${fmt(b.slotStart+HALF)} 的预约`);
+  attemptPromote(b.spotId, b.slotStart, Date.now());
+  save(); renderAll();
+  toast('已取消预约','ok');
+}
+
+function cancelQueue(id){
+  const q = state.queue.find(x=>x.id===id);
+  if(!q) return;
+  state.queue = state.queue.filter(x=>x.id!==id);
+  addLog(`🚶 ${resident(q.residentId).name} 退出了 ${spotName(q.spotId)} ${fmt(q.slotStart)}–${fmt(q.slotStart+HALF)} 的排队`);
+  attemptPromote(q.spotId, q.slotStart, Date.now()); // 队首退出后尝试补位
+  save(); renderAll();
+  toast('已退出排队','ok');
+}
+
+/* 释放后：队首自动顺延；会造成连占超限或重叠则保持排队并记录原因 */
+function attemptPromote(spotId, slotStart, now){
+  if(slotStart + HALF <= now) return;
+  if(activeAt(spotId, slotStart)) return;
+  const head = queueOf(spotId, slotStart)[0];
+  if(!head) return;
+  const r = resident(head.residentId);
+  let reason = null;
+  if(personOverlap(head.residentId, slotStart))
+    reason = '顺延受阻：此时段您已有其他预约（时段重叠）';
+  else if(chainLenIfAdd(head.residentId, spotId, slotStart) > 2)
+    reason = '顺延受阻：接受后将连占超过 2 个时段';
+  if(reason){
+    if(head.blockedReason !== reason){
+      head.blockedReason = reason;
+      addLog(`⏸ ${r.name} 在 ${spotName(spotId)} ${fmt(slotStart)} 时段${reason}，保持排队`);
+    }
+    return;
+  }
+  state.queue = state.queue.filter(q=>q.id!==head.id);
+  state.bookings.push({id:uid(), spotId, slotStart, residentId:head.residentId, battery:head.battery, status:'active', createdAt:Date.now()});
+  addLog(`✅ ${r.name} 排队顺延成功，获得 ${spotName(spotId)} ${fmt(slotStart)}–${fmt(slotStart+HALF)} 时段`);
+}
+
+/* 定时巡检：到期释放、清理过期排队、尝试顺延 */
+function sweep(){
+  const now = Date.now();
+  for(const b of state.bookings){
+    if(b.status==='active' && b.slotStart + HALF <= now){
+      b.status = 'done';
+      addLog(`⌛ ${spotName(b.spotId)} ${fmt(b.slotStart)}–${fmt(b.slotStart+HALF)} 时段结束，自动释放`);
+    }
+  }
+  const expired = state.queue.filter(q=>q.slotStart + HALF <= now);
+  if(expired.length){
+    state.queue = state.queue.filter(q=>q.slotStart + HALF > now);
+    expired.forEach(q=>addLog(`⌛ ${resident(q.residentId).name} 在 ${spotName(q.spotId)} ${fmt(q.slotStart)} 的排队因时段结束而失效`));
+  }
+  state.bookings = state.bookings.filter(b=>b.status==='active' || b.slotStart + HALF > now - 6*3600*1000);
+  const keys = [...new Set(state.queue.map(q=>q.spotId+'|'+q.slotStart))];
+  for(const k of keys){ const [spotId, ss] = k.split('|'); attemptPromote(spotId, Number(ss), now); }
+  save();
+  renderClock(); renderGrid(); renderMine(); renderLog();
+}
+
+/* ================= 渲染 ================= */
+const batBadge = b => `<span class="bat${b<15?' low':''}">${b<15?'⚡':''}${b}%</span>`;
+
+function chainBadgeOf(b){
+  let n = 1, t = b.slotStart - HALF;
+  const has = x => state.bookings.some(v=>v.status==='active' && v.residentId===b.residentId && v.spotId===b.spotId && v.slotStart===x);
+  while(has(t)){ n++; t -= HALF; }
+  t = b.slotStart + HALF;
+  while(has(t)){ n++; t += HALF; }
+  return n >= 2 ? `<span class="badge chain">连占×${n}</span>` : '';
+}
+
+function renderClock(){
+  const now = Date.now();
+  $('clock').textContent = `现在 ${fmtS(now)} · 预约窗口至 ${fmt(now + 2*3600*1000)}`;
+}
+
+function renderUsers(){
+  $('userTabs').innerHTML = state.residents.map(r=>
+    `<button class="user${r.id===state.currentUserId?' active':''}" data-action="switch" data-id="${r.id}">${r.name} ${batBadge(r.battery)}</button>`
+  ).join('');
+}
+
+function renderGrid(){
+  const now = Date.now();
+  const me = currentUser();
+  const slots = getSlots();
+  let html = `<div class="cell head"></div>` + SPOTS.map(s=>`<div class="cell head">${s.name}</div>`).join('');
+  for(const slot of slots){
+    const ongoing = slot.start <= now && now < slot.end;
+    html += `<div class="cell time">${fmt(slot.start)}–${fmt(slot.end)}${ongoing?'<span class="badge now">进行中</span>':''}</div>`;
+    for(const spot of SPOTS) html += renderCell(spot, slot, me);
+  }
+  $('grid').innerHTML = html;
+}
+
+function renderCell(spot, slot, me){
+  const b = activeAt(spot.id, slot.start);
+  const q = queueOf(spot.id, slot.start);
+  const myQ = q.find(x=>x.residentId===me.id);
+  const myPos = myQ ? q.indexOf(myQ)+1 : 0;
+  const qBtn = `<button class="btn amber" data-action="queue" data-spot="${spot.id}" data-slot="${slot.start}">${me.battery<15?'⚡ 插队':'排队'}</button>`;
+
+  if(b){
+    const r = resident(b.residentId);
+    if(b.residentId === me.id){
+      return `<div class="cell mine"><div class="tag ok">我的预约</div>${batBadge(b.battery)}${chainBadgeOf(b)}`+
+        (q.length?`<div class="qinfo">${q.length} 人排队</div>`:'')+
+        `<button class="btn ghost danger" data-action="cancel-booking" data-id="${b.id}">取消预约</button></div>`;
+    }
+    let inner = `<div class="tag occ">${r.name} 已预约</div>${batBadge(b.battery)}`;
+    if(myQ){
+      inner += `<div class="qinfo">我排第 ${myPos} 位${myQ.jumped?' · 已插队':''}</div>`;
+      if(myQ.blockedReason) inner += `<div class="reason">${myQ.blockedReason}</div>`;
+      inner += `<button class="btn ghost" data-action="cancel-queue" data-id="${myQ.id}">退出排队</button>`;
+    }else{
+      inner += `<div class="qinfo">${q.length?`已有 ${q.length} 人排队`:'可加入排队'}</div>${qBtn}`;
+    }
+    return `<div class="cell taken">${inner}</div>`;
+  }
+  if(q.length){
+    let inner = `<div class="tag waiting">空闲 · 等待顺延</div><div class="qinfo">${q.length} 人排队</div>`;
+    if(q[0].blockedReason) inner += `<div class="reason">队首：${q[0].blockedReason}</div>`;
+    if(myQ){
+      inner += `<div class="qinfo">我排第 ${myPos} 位${myQ.jumped?' · 已插队':''}</div>`;
+      if(myQ.blockedReason) inner += `<div class="reason">${myQ.blockedReason}</div>`;
+      inner += `<button class="btn ghost" data-action="cancel-queue" data-id="${myQ.id}">退出排队</button>`;
+    }else{
+      inner += qBtn;
+    }
+    return `<div class="cell wait">${inner}</div>`;
+  }
+  return `<div class="cell free"><div class="tag ok">可预约</div><button class="btn primary" data-action="book" data-spot="${spot.id}" data-slot="${slot.start}">预约</button></div>`;
+}
+
+function renderMine(){
+  const me = currentUser();
+  const myB = state.bookings.filter(b=>b.status==='active' && b.residentId===me.id).sort((a,b)=>a.slotStart-b.slotStart);
+  const myQ = state.queue.filter(q=>q.residentId===me.id);
+  let html = '';
+  if(!myB.length && !myQ.length) html = '<p class="empty">暂无预约或排队，点击上方格子开始预约</p>';
+  for(const b of myB){
+    html += `<div class="item"><div><strong>${spotName(b.spotId)}</strong> ${fmt(b.slotStart)}–${fmt(b.slotStart+HALF)} ${batBadge(b.battery)} ${chainBadgeOf(b)}</div>`+
+      `<button class="btn ghost danger small" data-action="cancel-booking" data-id="${b.id}">取消</button></div>`;
+  }
+  for(const q of myQ){
+    const pos = queueOf(q.spotId, q.slotStart).findIndex(x=>x.id===q.id) + 1;
+    html += `<div class="item"><div><strong>${spotName(q.spotId)}</strong> ${fmt(q.slotStart)}–${fmt(q.slotStart+HALF)} `+
+      `<span class="badge q">排队第 ${pos} 位${q.jumped?' · 插队':''}</span>`+
+      (q.blockedReason?`<div class="reason">${q.blockedReason}</div>`:'')+
+      `</div><button class="btn ghost small" data-action="cancel-queue" data-id="${q.id}">退出</button></div>`;
+  }
+  $('mine').innerHTML = html;
+}
+
+function renderLog(){
+  $('log').innerHTML = state.log.length
+    ? state.log.map(l=>`<div class="logitem"><span class="lt">${l.t}</span>${l.text}</div>`).join('')
+    : '<p class="empty">暂无动态</p>';
+}
+
+function renderAll(){
+  renderClock(); renderUsers(); renderGrid(); renderMine(); renderLog();
+}
+
+/* ================= 事件 ================= */
+document.addEventListener('click', e=>{
+  const el = e.target.closest('[data-action]');
+  if(!el) return;
+  const a = el.dataset.action;
+  if(a==='switch'){
+    state.currentUserId = el.dataset.id;
+    save(); renderAll();
+    $('batteryInput').value = currentUser().battery;
+  }
+  else if(a==='book') book(el.dataset.spot, Number(el.dataset.slot));
+  else if(a==='queue') joinQueue(el.dataset.spot, Number(el.dataset.slot));
+  else if(a==='cancel-booking') cancelBooking(el.dataset.id);
+  else if(a==='cancel-queue') cancelQueue(el.dataset.id);
+});
+
+function saveBattery(){
+  const v = parseInt($('batteryInput').value, 10);
+  if(isNaN(v) || v < 0 || v > 100){ toast('请输入 0–100 之间的电量','error'); return; }
+  const me = currentUser();
+  me.battery = v;
+  addLog(`🔋 ${me.name} 录入电量 ${v}%${v<15?'（低于 15%，获得插队资格）':''}`);
+  save(); renderAll();
+  $('batteryInput').value = v;
+  toast(v < 15 ? `电量 ${v}%，已具备插队资格` : `电量已录入 ${v}%`, 'ok');
+}
+$('saveBattery').addEventListener('click', saveBattery);
+$('batteryInput').addEventListener('keydown', e=>{ if(e.key==='Enter') saveBattery(); });
+
+$('resetBtn').addEventListener('click', ()=>{
+  if(confirm('确定清空本机保存的全部预约、排队与动态记录？')){
+    localStorage.removeItem(KEY);
+    location.reload();
+  }
+});
+
+/* ================= 启动 ================= */
+sweep();                 // 恢复时先结算过期时段
+renderAll();
+$('batteryInput').value = currentUser().battery;
+setInterval(sweep, 10000);       // 每 10 秒巡检：释放/顺延/滚动时段
+setInterval(renderClock, 1000);  // 时钟秒级刷新
+</script>
+</body>
+</html>
