@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>社区充电桩预约台</title>
+<style>
+  :root {
+    --bg: #f4f6f8;
+    --panel: #ffffff;
+    --ink: #1f2933;
+    --ink-2: #52606d;
+    --ink-3: #8a97a5;
+    --line: #e4e7eb;
+    --brand: #059669;
+    --brand-dark: #047857;
+    --brand-soft: #d1fae5;
+    --amber: #b45309;
+    --amber-soft: #fef3c7;
+    --red: #b91c1c;
+    --red-soft: #fee2e2;
+    --sky: #0369a1;
+    --sky-soft: #e0f2fe;
+    --r1: #059669; --r1-soft: #d1fae5;
+    --r2: #0369a1; --r2-soft: #e0f2fe;
+    --r3: #b45309; --r3-soft: #fef3c7;
+    --shadow: 0 1px 2px rgba(16,24,40,.05), 0 4px 12px rgba(16,24,40,.06);
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 20px 18px 48px; }
+
+  /* ---------- header ---------- */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .logo {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: linear-gradient(135deg, #10b981, #047857);
+    color: #fff; display: grid; place-items: center;
+    font-size: 22px; box-shadow: var(--shadow);
+  }
+  .brand h1 { font-size: 19px; margin: 0; letter-spacing: .5px; }
+  .brand .sub { color: var(--ink-3); font-size: 12px; margin-top: 1px; }
+  .top-right { display: flex; align-items: center; gap: 14px; }
+  .clock { text-align: right; }
+  .clock .time { font-variant-numeric: tabular-nums; font-size: 17px; font-weight: 600; }
+  .clock .date { color: var(--ink-3); font-size: 12px; }
+  .btn {
+    border: 1px solid var(--line); background: #fff; color: var(--ink);
+    border-radius: 9px; padding: 7px 13px; font-size: 13px; cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  .btn:hover { background: #f8fafc; }
+  .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn.primary:hover { background: var(--brand-dark); }
+  .btn.danger-ghost { color: var(--red); }
+  .btn.danger-ghost:hover { background: var(--red-soft); border-color: #fecaca; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.sm { padding: 3px 9px; font-size: 12px; border-radius: 7px; }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+  }
+  .panel h2 {
+    font-size: 14px; margin: 0; padding: 13px 16px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .panel h2 .hint { font-weight: 400; color: var(--ink-3); font-size: 12px; }
+
+  /* ---------- residents ---------- */
+  .residents { padding: 14px 16px; display: flex; gap: 12px; flex-wrap: wrap;
+    align-items: stretch; }
+  .resident {
+    flex: 1 1 230px; min-width: 230px;
+    border: 1.5px solid var(--line); border-radius: 12px;
+    padding: 11px 13px; cursor: pointer; background: #fff;
+    display: flex; align-items: center; gap: 11px;
+    transition: border-color .15s, box-shadow .15s, transform .05s;
+    text-align: left; width: 100%; font-family: inherit;
+  }
+  .resident:hover { border-color: #cbd2d9; }
+  .resident.active { border-color: var(--rc); box-shadow: 0 0 0 3px var(--rc-soft); }
+  .avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--rc-soft); color: var(--rc);
+    display: grid; place-items: center; font-weight: 700; font-size: 15px;
+    flex: none;
+  }
+  .resident .meta { flex: 1; min-width: 0; }
+  .resident .name { font-weight: 600; display: flex; align-items: center; gap: 7px; }
+  .resident .room { color: var(--ink-3); font-size: 12px; }
+  .battery-row { display: flex; align-items: center; gap: 7px; margin-top: 5px; }
+  .battery {
+    position: relative; width: 46px; height: 17px; border: 1.5px solid #7b8794;
+    border-radius: 4px; padding: 1.5px; flex: none;
+  }
+  .battery::after {
+    content: ""; position: absolute; right: -4px; top: 4px;
+    width: 2.5px; height: 7px; background: #7b8794; border-radius: 0 2px 2px 0;
+  }
+  .battery .level { height: 100%; border-radius: 1.5px; background: var(--brand); }
+  .battery.low .level { background: #dc2626; }
+  .battery.mid .level { background: #d97706; }
+  .battery-pct { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--ink-2); }
+  .battery input {
+    width: 52px; padding: 2px 5px; font-size: 12px;
+    border: 1px solid var(--line); border-radius: 6px; font-family: inherit;
+  }
+  .low-badge {
+    font-size: 11px; color: var(--red); background: var(--red-soft);
+    padding: 1px 7px; border-radius: 999px; font-weight: 600;
+  }
+  .check-dot {
+    width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line);
+    flex: none; display: grid; place-items: center; color: #fff; font-size: 11px;
+  }
+  .resident.active .check-dot { background: var(--rc); border-color: var(--rc); }
+
+  /* ---------- layout ---------- */
+  .grid-layout {
+    display: grid; grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 16px; margin-top: 16px; align-items: start;
+  }
+  @media (max-width: 900px) { .grid-layout { grid-template-columns: 1fr; } }
+
+  /* ---------- booking grid ---------- */
+  .table-scroll { overflow-x: auto; }
+  table.grid { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 760px; }
+  table.grid th, table.grid td {
+    border-bottom: 1px solid var(--line); border-right: 1px solid var(--line);
+    padding: 0; vertical-align: top;
+  }
+  table.grid th:last-child, table.grid td:last-child { border-right: none; }
+  table.grid tr:last-child td { border-bottom: none; }
+  table.grid thead th {
+    padding: 10px 12px; text-align: left; background: #f8fafc;
+    font-weight: 600; font-size: 13px;
+  }
+  table.grid thead .slot-range { font-variant-numeric: tabular-nums; }
+  table.grid thead .slot-rel { font-weight: 400; color: var(--ink-3); font-size: 11px; display: block; }
+  table.grid thead th:first-child {
+    border-top-left-radius: var(--radius); width: 120px;
+  }
+  table.grid thead th:last-child { border-top-right-radius: var(--radius); }
+  .spot-cell {
+    padding: 12px; font-weight: 600; background: #fcfdfd; position: sticky; left: 0;
+  }
+  .spot-cell .spot-sub { display: block; font-weight: 400; color: var(--ink-3); font-size: 11px; margin-top: 2px; }
+  .slot-cell { padding: 9px; min-width: 172px; height: 100%; }
+  .cell-inner { display: flex; flex-direction: column; gap: 6px; min-height: 86px; }
+
+  .booking-card {
+    border-radius: 9px; padding: 7px 9px; color: var(--rc);
+    background: var(--rc-soft); border: 1px solid color-mix(in srgb, var(--rc) 25%, transparent);
+  }
+  .booking-card .b-name { font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .booking-card .b-sub { font-size: 11px; opacity: .8; margin-top: 1px; }
+  .booking-card .b-actions { margin-top: 5px; }
+  .booking-card .b-actions .btn {
+    background: rgba(255,255,255,.75); border-color: rgba(0,0,0,.08);
+  }
+  .tag {
+    display: inline-block; font-size: 10.5px; padding: 0 6px; border-radius: 999px;
+    font-weight: 600; line-height: 17px; vertical-align: 1px;
+  }
+  .tag.low { background: var(--red); color: #fff; }
+  .tag.mine { background: #fff; color: var(--rc); border: 1px solid currentColor; }
+
+  .queue-chip {
+    display: flex; align-items: center; gap: 6px; font-size: 12px;
+    border: 1px dashed #cbd2d9; border-radius: 8px; padding: 4px 8px;
+    background: #fbfcfd; color: var(--ink-2);
+  }
+  .queue-chip .q-pos {
+    flex: none; width: 17px; height: 17px; border-radius: 50%;
+    background: #e4e7eb; color: #52606d; font-size: 10.5px; font-weight: 700;
+    display: grid; place-items: center;
+  }
+  .queue-chip.priority { border-color: #fca5a5; background: #fff5f5; }
+  .queue-chip.priority .q-pos { background: #dc2626; color: #fff; }
+  .queue-chip .q-name { color: var(--rc); font-weight: 600; }
+  .queue-chip .q-bat { color: var(--ink-3); font-size: 11px; }
+  .queue-chip .q-block {
+    flex-basis: 100%; color: var(--red); font-size: 11px; line-height: 1.4;
+    display: flex; gap: 4px; align-items: flex-start;
+  }
+  .cell-book-btn { margin-top: auto; }
+  .cell-book-btn .btn { width: 100%; }
+
+  .legend {
+    display: flex; gap: 16px; flex-wrap: wrap; padding: 10px 16px;
+    border-top: 1px solid var(--line); color: var(--ink-3); font-size: 12px;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .lg-dot { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+  /* ---------- side ---------- */
+  .side { display: flex; flex-direction: column; gap: 16px; }
+  .my-list { padding: 8px 16px 14px; }
+  .my-empty { color: var(--ink-3); font-size: 13px; padding: 10px 0 8px; }
+  .my-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 0; border-bottom: 1px dashed var(--line);
+  }
+  .my-item:last-child { border-bottom: none; }
+  .my-item .mi-main { flex: 1; min-width: 0; }
+  .my-item .mi-title { font-weight: 600; font-size: 13px; }
+  .my-item .mi-sub { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .status-pill { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; }
+  .status-confirmed { background: var(--brand-soft); color: var(--brand-dark); }
+  .status-waiting { background: #e4e7eb; color: #52606d; }
+  .status-priority { background: var(--red-soft); color: var(--red); }
+  .status-running { background: var(--sky-soft); color: var(--sky); }
+  .mi-block { color: var(--red); font-size: 11.5px; margin-top: 3px; }
+
+  .log-panel .logs {
+    margin: 0; padding: 10px 16px 12px; list-style: none;
+    max-height: 240px; overflow-y: auto; font-size: 12.5px;
+  }
+  .logs li { padding: 4px 0; color: var(--ink-2); display: flex; gap: 8px; }
+  .logs .log-time { color: var(--ink-3); font-variant-numeric: tabular-nums; flex: none; }
+  .logs li.log-good { color: var(--brand-dark); }
+  .logs li.log-warn { color: var(--amber); }
+  .logs li.log-bad { color: var(--red); }
+
+  .rules {
+    margin-top: 16px; padding: 13px 16px; font-size: 12.5px; color: var(--ink-2);
+  }
+  .rules summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+  .rules ul { margin: 9px 0 2px; padding-left: 20px; }
+  .rules li { margin: 3px 0; }
+
+  /* ---------- toasts ---------- */
+  #toasts {
+    position: fixed; right: 18px; bottom: 18px; z-index: 50;
+    display: flex; flex-direction: column; gap: 9px; max-width: 360px;
+  }
+  .toast {
+    background: #1f2933; color: #fff; padding: 10px 14px; border-radius: 10px;
+    font-size: 13px; box-shadow: 0 8px 24px rgba(0,0,0,.22);
+    animation: toast-in .18s ease-out;
+  }
+  .toast.good { background: #065f46; }
+  .toast.warn { background: #92400e; }
+  .toast.bad { background: #991b1b; }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">⚡</div>
+      <div>
+        <h1>社区充电桩预约台</h1>
+        <div class="sub">未来两小时 · 半小时一档 · 同一车位时段不可重叠</div>
+      </div>
+    </div>
+    <div class="top-right">
+      <div class="clock">
+        <div class="time" id="clock-time">--:--:--</div>
+        <div class="date" id="clock-date"></div>
+      </div>
+      <button class="btn danger-ghost" id="reset-btn" title="清除本机保存的全部预约数据">清空数据</button>
+    </div>
+  </header>
+
+  <section class="panel">
+    <h2>住户身份 <span class="hint">先选择住户，再录入当前电量；电量低于 15% 排队时可插队</span></h2>
+    <div class="residents" id="residents"></div>
+  </section>
+
+  <div class="grid-layout">
+    <section class="panel">
+      <h2>车位时段表
+        <span class="hint" id="grid-hint"></span>
+      </h2>
+      <div class="table-scroll">
+        <table class="grid">
+          <thead><tr id="slot-head"></tr></thead>
+          <tbody id="slot-body"></tbody>
+        </table>
+      </div>
+      <div class="legend">
+        <span><i class="lg-dot" style="background:var(--brand-soft);border:1px solid var(--brand)"></i>已预约</span>
+        <span><i class="lg-dot" style="background:#fff;border:1px dashed #cbd2d9"></i>排队中（数字为顺位）</span>
+        <span><i class="lg-dot" style="background:#dc2626"></i>低电量优先（插队）</span>
+        <span>每人最多连占 2 个时段，插队也不能突破</span>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <h2>我的预约与排队</h2>
+        <div class="my-list" id="my-list"></div>
+      </section>
+      <section class="panel log-panel">
+        <h2>动态记录</h2>
+        <ul class="logs" id="logs"></ul>
+      </section>
+    </aside>
+  </div>
+
+  <details class="panel rules">
+    <summary>预约规则</summary>
+    <ul>
+      <li>可预约从下一个整点 / 半点起的 4 个半小时时段（覆盖未来两小时）。</li>
+      <li>同一车位同一时段只能有一个有效预约；已被占用时可排队。</li>
+      <li>每位住户同一时刻只能在一个车位充电，且总共最多连占 2 个时段。</li>
+      <li>电量低于 15% 的住户排队时自动插到普通排队者之前，但仍然不能突破上述两条限制。</li>
+      <li>预约被取消或到时自动释放后，排队最早且满足条件的住户自动顺延获得该时段。</li>
+      <li>若顺延会造成时段重叠或连占超过 2 个，则继续排队，并在该格与“我的预约”中标注原因。</li>
+      <li>数据只保存在当前浏览器（localStorage），关闭后重新打开会自动恢复。</li>
+    </ul>
+  </details>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+"use strict";
+
+/* ================= 常量与预置数据 ================= */
+const SLOT_MS = 30 * 60 * 1000;
+const STORAGE_KEY = "charging-station-v1";
+
+const SPOTS = [
+  { id: "A1", name: "车位 A1", sub: "60kW 直流快充" },
+  { id: "A2", name: "车位 A2", sub: "60kW 直流快充" },
+  { id: "B1", name: "车位 B1", sub: "7kW 交流慢充" },
+  { id: "B2", name: "车位 B2", sub: "7kW 交流慢充" }
+];
+
+const DEFAULT_RESIDENTS = [
+  { id: "u1", name: "王敏", room: "5 栋 101", battery: 60 },
+  { id: "u2", name: "李强", room: "8 栋 203", battery: 30 },
+  { id: "u3", name: "赵蕾", room: "12 栋 502", battery: 80 }
+];
+const RESIDENT_COLORS = {
+  u1: ["var(--r1)", "var(--r1-soft)"],
+  u2: ["var(--r2)", "var(--r2-soft)"],
+  u3: ["var(--r3)", "var(--r3-soft)"]
+};
+
+/* ================= 状态 ================= */
+let state = loadState();
+const logs = []; // 动态记录只保留在内存中
+
+function freshState() {
+  return {
+    residents: DEFAULT_RESIDENTS.map(r => ({ ...r })),
+    activeId: DEFAULT_RESIDENTS[0].id,
+    confirmed: [], // { key, spot, start, resident, priority, batteryAtBooking }
+    waiters: []    // { key, spot, start, resident, priority, batteryAtBooking, reason? }
+  };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return freshState();
+    const parsed = JSON.parse(raw);
+    const base = freshState();
+    return {
+      residents: base.residents.map(d => {
+        const saved = (parsed.residents || []).find(r => r.id === d.id);
+        return saved ? { ...d, battery: clampBattery(saved.battery) } : d;
+      }),
+      activeId: parsed.activeId || base.activeId,
+      confirmed: Array.isArray(parsed.confirmed) ? parsed.confirmed : [],
+      waiters: Array.isArray(parsed.waiters) ? parsed.waiters : []
+    };
+  } catch (e) {
+    return freshState();
+  }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      residents: state.residents,
+      activeId: state.activeId,
+      confirmed: state.confirmed,
+      waiters: state.waiters
+    }));
+  } catch (e) { /* 存储不可用时静默降级为内存态 */ }
+}
+
+/* ================= 工具 ================= */
+const $ = sel => document.querySelector(sel);
+const pad = n => String(n).padStart(2, "0");
+function clampBattery(v) {
+  v = Number(v);
+  if (!Number.isFinite(v)) v = 0;
+  return Math.max(0, Math.min(100, Math.round(v)));
+}
+function entryKey(spot, start) { return spot + "@" + start; }
+function residentById(id) { return state.residents.find(r => r.id === id); }
+function activeResident() { return residentById(state.activeId); }
+function isLow(bat) { return bat < 15; }
+
+function hhmm(t) {
+  const d = new Date(t);
+  return pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+function rangeText(start) {
+  return hhmm(start) + "–" + hhmm(start + SLOT_MS);
+}
+function clockText(t) {
+  const d = new Date(t);
+  return pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+}
+function dateText(t) {
+  const d = new Date(t);
+  const week = ["日","一","二","三","四","五","六"][d.getDay()];
+  return `${d.getMonth() + 1}月${d.getDate()}日 星期${week}`;
+}
+function logTimeText(t) {
+  const d = new Date(t);
+  return pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+/** 未来两小时内可预约的 4 个半小时时段（起点严格在当前时间之后） */
+function upcomingSlots(now) {
+  const t = Math.floor(now / SLOT_MS) * SLOT_MS + SLOT_MS;
+  return [0, 1, 2, 3].map(k => t + k * SLOT_MS);
+}
+
+/* ================= 核心规则 ================= */
+/**
+ * 校验某住户获得某车位某时段是否合法。
+ * 返回 null 表示可以顺延/预约；否则返回原因字符串。
+ */
+function validatePromotion(rid, start, spotId) {
+  const r = residentById(rid);
+  const myConfirmed = state.confirmed.filter(e => e.resident === rid);
+
+  // 规则一：同一时段不能重叠（一个人不可能同时在两个车位充电）
+  const overlap = myConfirmed.find(e => e.start === start);
+  if (overlap) {
+    return {
+      code: "overlap",
+      reason: `${rangeText(start)} 已有预约（${spotName(overlap.spot)}），同时段不能重叠`
+    };
+  }
+
+  // 规则二：每人最多连占两个时段（插队也不能突破）
+  if (myConfirmed.length >= 2) {
+    return {
+      code: "cap",
+      reason: `已连占 ${myConfirmed.length} 个时段，每人最多连占 2 个（低电量插队也不能突破）`
+    };
+  }
+  return null;
+}
+
+function spotName(id) {
+  const s = SPOTS.find(x => x.id === id);
+  return s ? s.name : id;
+}
+
+/**
+ * 到期处理 + 排队顺延。
+ * 1) 释放已结束的预约 / 清理已到点的排队；
+ * 2) 对每个空出且仍在未来的车位时段，按排队顺序寻找第一个可顺延者；
+ * 3) 排到但不满足条件者保留排队位置并写明原因。
+ * 返回本次实际发生的事件（用于提示），并写入动态记录。
+ */
+function settle(now) {
+  const events = [];
+
+  // 1. 到时释放
+  state.confirmed = state.confirmed.filter(e => {
+    if (now >= e.start + SLOT_MS) {
+      events.push({ type: "release", entry: e });
+      return false;
+    }
+    return true;
+  });
+
+  // 已到开始时刻的排队不再可能顺延，清理掉
+  state.waiters = state.waiters.filter(w => {
+    if (now >= w.start) {
+      events.push({ type: "waitExpire", entry: w });
+      return false;
+    }
+    return true;
+  });
+
+  // 记录旧原因，仅对本次会重新评估的队首清除；格仍占用的排队保留原原因
+  const prevReason = new Map();
+  state.waiters.forEach(w => prevReason.set(w.key + "|" + w.resident, w.reason || ""));
+
+  // 2. 逐格顺延（按时间、车位固定顺序处理，结果确定）
+  const cells = new Map();
+  for (const w of state.waiters) {
+    if (!cells.has(w.key)) cells.set(w.key, []);
+    cells.get(w.key).push(w);
+  }
+  const cellKeys = [...cells.keys()].sort();
+
+  for (const key of cellKeys) {
+    const [spotId, startStr] = key.split("@");
+    const start = Number(startStr);
+    if (now >= start) continue; // 已开始的格子不再顺延
+
+    // 格内只看队首：仅当格子空闲时才尝试顺延。
+    // 队首可顺便占用该格；队首因重叠/连占受阻则写明原因、
+    // 保留位置并停止，不越过队首顺延后面的人（下次释放或阻碍解除时再试）。
+    if (state.confirmed.some(e => e.key === key)) continue;
+    const w = cells.get(key)[0];
+    delete w.reason;
+    const fail = validatePromotion(w.resident, w.start, w.spot);
+    if (fail) {
+      w.reason = fail.reason;
+      const prev = prevReason.get(key + "|" + w.resident) || "";
+      if (prev !== fail.reason) events.push({ type: "block", entry: w, reason: fail.reason });
+    } else {
+      state.confirmed.push({
+        key: w.key, spot: w.spot, start: w.start,
+        resident: w.resident, priority: w.priority,
+        batteryAtBooking: w.batteryAtBooking
+      });
+      state.waiters = state.waiters.filter(x => x !== w);
+      events.push({ type: "promote", entry: w });
+    }
+  }
+
+  for (const ev of events) writeLogForEvent(ev);
+  return events;
+}
+
+/** 预约 / 排队（点击格子按钮） */
+function bookSlot(spotId, start) {
+  const me = activeResident();
+  if (!me) return "请先选择住户身份";
+  const now = Date.now();
+  if (now >= start) return "该时段已开始或已过，无法预约";
+
+  const key = entryKey(spotId, start);
+  if (state.waiters.some(w => w.key === key && w.resident === me.id)) {
+    return `你已在 ${spotName(spotId)} ${rangeText(start)} 的排队中，请勿重复排队`;
+  }
+  if (state.confirmed.some(e => e.key === key && e.resident === me.id)) {
+    return `你已预约 ${spotName(spotId)} ${rangeText(start)}，无需再排队`;
+  }
+
+  const occupied = state.confirmed.some(e => e.key === key);
+  const lineExists = state.waiters.some(w => w.key === key);
+  if (!occupied && !lineExists) {
+    const fail = validatePromotion(me.id, start, spotId);
+    if (fail) return "无法预约：" + fail.reason;
+    state.confirmed.push({
+      key, spot: spotId, start, resident: me.id,
+      priority: isLow(me.battery), batteryAtBooking: me.battery
+    });
+    settle(Date.now());
+    saveState();
+    render();
+    return { kind: "good", text: `预约成功：${spotName(spotId)} ${rangeText(start)}` +
+      (isLow(me.battery) ? "（低电量优先）" : "") };
+  }
+
+  // 已被占用 → 排队；低电量插到普通排队者之前（同为优先者按先后排）
+  const low = isLow(me.battery);
+  const waiter = {
+    key, spot: spotId, start, resident: me.id,
+    priority: low, batteryAtBooking: me.battery
+  };
+  const line = state.waiters.filter(w => w.key === key);
+  let withinIdx;
+  if (low) {
+    withinIdx = line.findIndex(w => !w.priority);
+    if (withinIdx === -1) withinIdx = line.length;
+  } else {
+    withinIdx = line.length;
+  }
+  const queuePos = withinIdx + 1; // 插入后的队内顺位
+  state.waiters.splice(indexInGlobal(key, withinIdx), 0, waiter);
+
+  settle(Date.now());
+  saveState();
+  render();
+  return {
+    kind: low ? "warn" : "info",
+    text: (low
+      ? `电量 ${me.battery}% 低于 15%，已优先插队：`
+      : `该时段已被占用，已加入排队：`) +
+      `${spotName(spotId)} ${rangeText(start)}，当前第 ${queuePos} 位。` +
+      `取消或到时释放后将自动顺延；若顺延会造成重叠或连占超限，将继续排队并提示原因。`
+  };
+}
+
+/** 把“格内位置 idx”换算成全局 waiters 数组中的下标 */
+function indexInGlobal(key, withinIdx) {
+  let seen = 0;
+  for (let i = 0; i < state.waiters.length; i++) {
+    if (state.waiters[i].key === key) {
+      if (seen === withinIdx) return i;
+      seen++;
+    }
+  }
+  return state.waiters.length;
+}
+
+/** 取消自己的已确认预约，随后触发顺延 */
+function cancelBooking(key) {
+  const idx = state.confirmed.findIndex(e => e.key === key && e.resident === state.activeId);
+  if (idx === -1) return "只能取消自己的预约";
+  const removed = state.confirmed[idx];
+  state.confirmed.splice(idx, 1);
+
+  const events = settle(Date.now());
+  saveState();
+  render();
+
+  let msg = `已取消 ${spotName(removed.spot)} ${rangeText(removed.start)}`;
+  const promoted = events.filter(e => e.type === "promote");
+  const blocked = events.filter(e => e.type === "block");
+  if (promoted.length) {
+    const p = promoted[0];
+    const r = residentById(p.entry.resident);
+    msg += `。最早可顺延者 ${r.name} 已自动获得该时段`;
+  } else if (blocked.length) {
+    const b = blocked[0];
+    const r = residentById(b.entry.resident);
+    msg += `。最早排队者 ${r.name} 保持排队：${b.reason}`;
+  } else {
+    msg += "，目前该时段无人排队";
+  }
+  return { kind: "good", text: msg };
+}
+
+/** 退出排队 */
+function leaveQueue(key) {
+  const before = state.waiters.length;
+  state.waiters = state.waiters.filter(w => !(w.key === key && w.resident === state.activeId));
+  const changed = state.waiters.length !== before;
+  if (changed) { settle(Date.now()); saveState(); render(); }
+  return changed ? { kind: "info", text: "已退出排队" } : "没有找到你的排队记录";
+}
+
+/* ================= 渲染 ================= */
+function render() {
+  const now = Date.now();
+  renderResidents();
+  renderGrid(now);
+  renderMyList(now);
+  renderLogs();
+}
+
+function renderResidents() {
+  const box = $("#residents");
+  box.innerHTML = state.residents.map(r => {
+    const [color, soft] = RESIDENT_COLORS[r.id] || ["#52606d", "#e4e7eb"];
+    const active = r.id === state.activeId;
+    const low = isLow(r.battery);
+    const cls = low ? "low" : (r.battery <= 30 ? "mid" : "");
+    return `
+      <button class="resident ${active ? "active" : ""}" data-action="switch" data-id="${r.id}"
+        style="--rc:${color};--rc-soft:${soft}">
+        <span class="avatar">${escapeHtml(r.name[0])}</span>
+        <span class="meta">
+          <span class="name">${escapeHtml(r.name)}
+            ${low ? '<span class="low-badge">低电量可插队</span>' : ""}
+          </span>
+          <span class="room">${escapeHtml(r.room)}</span>
+          <span class="battery-row">
+            <span class="battery ${cls}"><span class="level" style="width:${r.battery}%"></span></span>
+            <input type="number" min="0" max="100" step="1" value="${r.battery}"
+              data-action="battery" data-id="${r.id}" aria-label="${escapeHtml(r.name)}的电量百分比" />
+            <span class="battery-pct">%</span>
+          </span>
+        </span>
+        <span class="check-dot">${active ? "✓" : ""}</span>
+      </button>`;
+  }).join("");
+}
+
+function renderGrid(now) {
+  const slots = upcomingSlots(now);
+  const head = $("#slot-head");
+  head.innerHTML = `<th>车位 ＼ 时段</th>` + slots.map((s, i) => {
+    const mins = Math.round((s - now) / 60000);
+    const rel = i === 0 ? `约 ${mins} 分钟后开始` : `+${i * 30} 分钟`;
+    return `<th><span class="slot-range">${rangeText(s)}</span><span class="slot-rel">${rel}</span></th>`;
+  }).join("");
+
+  $("#grid-hint").textContent =
+    `每 15 秒刷新；${hhmm(slots[0])} 之前的时段按“到时释放”处理`;
+
+  const body = $("#slot-body");
+  body.innerHTML = SPOTS.map(spot => {
+    const cells = slots.map(start => renderCell(spot, start)).join("");
+    return `<tr><td class="spot-cell">${escapeHtml(spot.name)}<span class="spot-sub">${escapeHtml(spot.sub)}</span></td>${cells}</tr>`;
+  }).join("");
+}
+
+function renderCell(spot, start) {
+  const key = entryKey(spot.id, start);
+  const booking = state.confirmed.find(e => e.key === key);
+  const line = state.waiters.filter(w => w.key === key);
+  const me = activeResident();
+
+  let html = `<td class="slot-cell"><div class="cell-inner">`;
+
+  if (booking) {
+    const r = residentById(booking.resident);
+    const [color, soft] = RESIDENT_COLORS[r.id] || ["#52606d", "#e4e7eb"];
+    const isMine = r.id === me.id;
+    html += `<div class="booking-card" style="--rc:${color};--rc-soft:${soft}">
+      <div class="b-name">${escapeHtml(r.name)}
+        ${booking.priority ? '<span class="tag low">插队</span>' : ""}
+        ${isMine ? '<span class="tag mine">我的</span>' : ""}
+      </div>
+      <div class="b-sub">录入电量 ${booking.batteryAtBooking}% · ${escapeHtml(r.room)}</div>
+      ${isMine ? `<div class="b-actions"><button class="btn sm danger-ghost"
+        data-action="cancel" data-key="${key}">取消预约</button></div>` : ""}
+    </div>`;
+  }
+
+  if (line.length) {
+    html += line.map((w, i) => {
+      const wr = residentById(w.resident);
+      const [color] = RESIDENT_COLORS[wr.id] || ["#52606d"];
+      return `<div class="queue-chip ${w.priority ? "priority" : ""}"
+        style="--rc:${color}" title="${w.reason ? escapeHtml(w.reason) : ""}">
+        <span class="q-pos">${i + 1}</span>
+        <span class="q-name">${escapeHtml(wr.name)}</span>
+        <span class="q-bat">${w.batteryAtBooking}%</span>
+        ${w.priority ? '<span title="低电量优先插队">⚡</span>' : ""}
+        ${w.reason ? `<span class="q-block">⚠ ${escapeHtml(w.reason)}</span>` : ""}
+      </div>`;
+    }).join("");
+  }
+
+  const inLine = line.some(w => w.resident === me.id);
+  const mine = booking && booking.resident === me.id;
+  let label;
+  if (mine) label = "我的预约";
+  else if (inLine) label = "已在排队";
+  else if (booking) label = "排队等候";
+  else label = line.length ? "继续排队" : "预约此时段";
+  html += `<div class="cell-book-btn">
+      <button class="btn primary sm" data-action="book" data-spot="${spot.id}" data-start="${start}"
+        ${inLine || mine ? "disabled" : ""}>
+        ${label}
+      </button></div>`;
+
+  html += `</div></td>`;
+  return html;
+}
+
+function renderMyList(now) {
+  const me = activeResident();
+  const box = $("#my-list");
+  const mine = [
+    ...state.confirmed.filter(e => e.resident === me.id).map(e => ({ ...e, _kind: "confirmed" })),
+    ...state.waiters.filter(w => w.resident === me.id).map(w => ({ ...w, _kind: "waiting" }))
+  ].sort((a, b) => a.start - b.start || a.spot.localeCompare(b.spot));
+
+  if (!mine.length) {
+    box.innerHTML = `<div class="my-empty">${escapeHtml(me.name)} 当前没有预约或排队。</div>`;
+    return;
+  }
+
+  box.innerHTML = mine.map(e => {
+    const running = e._kind === "confirmed" && now >= e.start && now < e.start + SLOT_MS;
+    let pill;
+    if (running) pill = '<span class="status-pill status-running">充电中</span>';
+    else if (e._kind === "confirmed") pill = '<span class="status-pill status-confirmed">已预约</span>';
+    else if (e.priority) pill = '<span class="status-pill status-priority">低电量插队排队</span>';
+    else pill = '<span class="status-pill status-waiting">排队中</span>';
+
+    let extra = "";
+    if (e._kind === "waiting") {
+      const pos = state.waiters.filter(w => w.key === e.key).indexOf(
+        state.waiters.find(w => w.key === e.key && w.resident === me.id)) + 1;
+      const occupied = state.confirmed.some(c => c.key === e.key);
+      extra = `<div class="mi-sub">${occupied ? "当前第 " + pos + " 位" : "正在尝试顺延…"}</div>`;
+      if (e.reason) extra += `<div class="mi-block">⚠ 顺延被保留：${escapeHtml(e.reason)}</div>`;
+      extra += `<div style="margin-top:5px"><button class="btn sm danger-ghost"
+        data-action="leave" data-key="${e.key}">退出排队</button></div>`;
+    }
+
+    const actionBtn = (e._kind === "confirmed" && now < e.start)
+      ? `<button class="btn sm danger-ghost" data-action="cancel" data-key="${e.key}">取消</button>` : "";
+
+    return `<div class="my-item">
+      <div class="mi-main">
+        <div class="mi-title">${escapeHtml(spotName(e.spot))} ${pill}</div>
+        <div class="mi-sub">${rangeText(e.start)}</div>
+        ${extra}
+      </div>
+      ${actionBtn}
+    </div>`;
+  }).join("");
+}
+
+function renderLogs() {
+  const ul = $("#logs");
+  if (!logs.length) {
+    ul.innerHTML = `<li><span class="log-time"></span><span>暂无动态，预约、排队、顺延和释放都会记录在这里。</span></li>`;
+    return;
+  }
+  ul.innerHTML = logs.map(l =>
+    `<li class="log-${l.level || ""}"><span class="log-time">${logTimeText(l.t)}</span><span>${escapeHtml(l.text)}</span></li>`
+  ).join("");
+  ul.scrollTop = ul.scrollHeight;
+}
+
+/* ================= 动态记录与提示 ================= */
+function addLog(text, level) {
+  logs.push({ t: Date.now(), text, level });
+  if (logs.length > 40) logs.shift();
+}
+function nameOf(rid) { const r = residentById(rid); return r ? r.name : rid; }
+function writeLogForEvent(ev) {
+  const e = ev.entry;
+  if (ev.type === "release")
+    addLog(`到时释放：${nameOf(e.resident)} 的 ${spotName(e.spot)} ${rangeText(e.start)} 已结束`, "warn");
+  else if (ev.type === "waitExpire")
+    addLog(`排队失效：${nameOf(e.resident)} 在 ${spotName(e.spot)} ${rangeText(e.start)} 的排队已过开始时刻`, "warn");
+  else if (ev.type === "promote")
+    addLog(`自动顺延：${nameOf(e.resident)} 获得 ${spotName(e.spot)} ${rangeText(e.start)}${e.priority ? "（低电量优先）" : ""}`, "good");
+  else if (ev.type === "block")
+    addLog(`顺延受阻：${nameOf(e.resident)} 继续排队——${ev.reason}`, "bad");
+}
+
+function showToast(msg) {
+  if (!msg) return;
+  const text = typeof msg === "string" ? msg : msg.text;
+  const kind = typeof msg === "string" ? "" : (msg.kind || "");
+  const el = document.createElement("div");
+  el.className = "toast " + (kind === "good" ? "good" : kind === "warn" ? "warn" :
+    kind === "bad" ? "bad" : "");
+  el.textContent = text;
+  $("#toasts").appendChild(el);
+  setTimeout(() => { el.style.opacity = "0"; el.style.transition = "opacity .3s"; }, 3600);
+  setTimeout(() => el.remove(), 4000);
+}
+
+/* ================= 事件绑定 ================= */
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-action]");
+  if (!el) return;
+  const action = el.dataset.action;
+
+  if (action === "switch") {
+    if (state.activeId !== el.dataset.id) {
+      state.activeId = el.dataset.id;
+      saveState();
+      render();
+    }
+    return;
+  }
+  if (action === "book") {
+    const msg = bookSlot(el.dataset.spot, Number(el.dataset.start));
+    showToast(msg);
+    return;
+  }
+  if (action === "cancel") {
+    const msg = cancelBooking(el.dataset.key);
+    showToast(msg);
+    return;
+  }
+  if (action === "leave") {
+    const msg = leaveQueue(el.dataset.key);
+    showToast(msg);
+    return;
+  }
+});
+
+document.addEventListener("change", (e) => {
+  const el = e.target.closest('[data-action="battery"]');
+  if (!el) return;
+  const rid = el.dataset.id;
+  const r = residentById(rid);
+  const old = r.battery;
+  r.battery = clampBattery(el.value);
+
+  // 电量变化不改变已排队的优先级（以录入排队时为准），仅影响之后的新排队
+  if (old !== r.battery) {
+    settle(Date.now());
+    saveState();
+    render();
+    showToast({
+      kind: r.battery < 15 ? "warn" : "info",
+      text: `${r.name} 的电量已更新为 ${r.battery}%` +
+        (r.battery < 15 ? "，此后新排队将自动插队" : "")
+    });
+  }
+});
+
+$("#reset-btn").addEventListener("click", () => {
+  if (confirm("确定清空本机保存的全部预约、排队与电量数据，并恢复为 4 个车位、3 名预置住户吗？")) {
+    localStorage.removeItem(STORAGE_KEY);
+    state = freshState();
+    logs.length = 0;
+    addLog("数据已清空并恢复初始状态", "warn");
+    settle(Date.now());
+    saveState();
+    render();
+    showToast("已恢复初始数据");
+  }
+});
+
+/* ================= 时钟与定时刷新 ================= */
+function tickClock() {
+  const now = new Date();
+  $("#clock-time").textContent = clockText(now);
+  $("#clock-date").textContent = dateText(now);
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+// 每 15 秒：到时释放 + 自动顺延 + 重绘时段表（到点会换出新一档）
+setInterval(() => {
+  const events = settle(Date.now());
+  saveState();
+  render();
+  for (const ev of events) {
+    if (ev.type === "promote")
+      showToast({ kind: "good", text: `顺延成功：${nameOf(ev.entry.resident)} 自动获得 ${spotName(ev.entry.spot)} ${rangeText(ev.entry.start)}` });
+    else if (ev.type === "block")
+      showToast({ kind: "bad", text: `${nameOf(ev.entry.resident)} 保持排队：${ev.reason}` });
+    else if (ev.type === "release")
+      showToast({ kind: "warn", text: `时段到时释放：${spotName(ev.entry.spot)} ${rangeText(ev.entry.start)}` });
+  }
+}, 15000);
+
+/* ================= 启动 ================= */
+(function init() {
+  const restoredC = state.confirmed.length;
+  const restoredW = state.waiters.length;
+  const events = settle(Date.now());
+  saveState();
+  render();
+  if (restoredC || restoredW) {
+    addLog(`已从当前浏览器恢复：${restoredC} 个预约、${restoredW} 个排队`, "good");
+    renderLogs();
+    showToast(`已恢复上次状态：${restoredC} 个预约、${restoredW} 个排队`);
+  } else {
+    addLog("预约台已就绪：预置 4 个车位、3 名住户", "good");
+    renderLogs();
+  }
+  // 恢复后若立即发生顺延/受阻，也提示出来
+  for (const ev of events) {
+    if (ev.type === "promote")
+      showToast({ kind: "good", text: `顺延成功：${nameOf(ev.entry.resident)} 自动获得 ${spotName(ev.entry.spot)} ${rangeText(ev.entry.start)}` });
+    if (ev.type === "block")
+      showToast({ kind: "bad", text: `${nameOf(ev.entry.resident)} 保持排队：${ev.reason}` });
+  }
+})();
+</script>
+</body>
+</html>
